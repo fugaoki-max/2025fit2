@@ -1,189 +1,43 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <title>嘘の壁がある迷路</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/gh/kitao/pyxel/wasm/pyxel.js"></script>
-  <style>
-    body {
-      background:#111;
-      color:white;
-      text-align:center;
-      font-family:sans-serif;
-    }
-    h1 { margin-top:40px; font-size:32px; }
-    p { font-size:18px; margin:10px 0; }
-    .note {
-      font-size:16px;
-      color:#ffcc00;
-      margin:10px 0 30px 0;
-    }
-    a {
-      display:inline-block;
-      margin-top:20px;
-      padding:10px 30px;
-      font-size:20px;
-      background:#ff4fa3;
-      color:white;
-      text-decoration:none;
-      border-radius:10px;
-    }
-    canvas {
-      outline:none; /* フォーカス時の青枠を消す */
-      margin-top:20px;
-    }
-  </style>
-</head>
-<body>
-
-  <h1>嘘の壁がある迷路</h1>
-  <p>十字キーで操作してゴールを目指そう</p>
-  <p>近づくと正体がわかる「嘘の壁」に注意！</p>
-  <p class="note">※ゲーム画面をクリックしなくても矢印キーで操作できます</p>
-
-  <!-- ゲーム実行 -->
-  <pyxel-run script="
-import pyxel
-import random
-from collections import deque
-import time
-
-CELL_SIZE = 8
-MAZE_W = 32
-MAZE_H = 30
-UI_H = 16
-SCREEN_W = 256
-SCREEN_H = MAZE_H * CELL_SIZE + UI_H
-
-WALL = 1
-ROAD = 0
-COUNTDOWN_TIME = 3.0
-HOLD_MOVE_INTERVAL = 0.08
-
-class App:
-    def __init__(self):
-        pyxel.init(SCREEN_W, SCREEN_H, title='嘘の壁がある迷路')
-        self.start_new_maze()
-        pyxel.run(self.update, self.draw)
-
-    def start_new_maze(self):
-        self.generate_maze()
-        self.set_goal()
-        self.set_fake_walls()
-        self.px, self.py = 1, 1
-        self.countdown_start = time.time()
-        self.start_time = None
-        self.clear_time = 0
-        self.last_move_time = 0
-        self.state = 'COUNTDOWN'
-
-    def generate_maze(self):
-        self.maze = [[WALL for _ in range(MAZE_W)] for _ in range(MAZE_H)]
-        def dfs(x,y):
-            self.maze[y][x]=ROAD
-            dirs=[(2,0),(-2,0),(0,2),(0,-2)]
-            random.shuffle(dirs)
-            for dx,dy in dirs:
-                nx,ny=x+dx,y+dy
-                if 1<=nx<MAZE_W-1 and 1<=ny<MAZE_H-1 and self.maze[ny][nx]==WALL:
-                    self.maze[y+dy//2][x+dx//2]=ROAD
-                    dfs(nx,ny)
-        dfs(1,1)
-
-    def set_goal(self):
-        queue=deque(); visited=[[False]*MAZE_W for _ in range(MAZE_H)]
-        queue.append((1,1)); visited[1][1]=True; farthest=(1,1)
-        while queue:
-            x,y=queue.popleft(); farthest=(x,y)
-            for dx,dy in [(1,0),(-1,0),(0,1),(0,-1)]:
-                nx,ny=x+dx,y+dy
-                if 0<=nx<MAZE_W and 0<=ny<MAZE_H:
-                    if not visited[ny][nx] and self.maze[ny][nx]==ROAD:
-                        visited[ny][nx]=True; queue.append((nx,ny))
-        self.gx,self.gy=farthest
-
-    def set_fake_walls(self):
-        candidates=[(x,y) for y in range(1,MAZE_H-1) for x in range(1,MAZE_W-1)
-                    if self.maze[y][x]==ROAD and (x,y)!=(1,1) and (x,y)!=(self.gx,self.gy)]
-        self.fake_walls=set(random.sample(candidates, random.randint(5,10)))
-
-    def is_revealed(self,fx,fy):
-        return abs(fx-self.px)+abs(fy-self.py)==1
-
-    def update(self):
-        if self.state=='COUNTDOWN':
-            if time.time()-self.countdown_start>=COUNTDOWN_TIME:
-                self.start_time=time.time(); self.state='PLAY'
-            return
-        if self.state=='CLEAR':
-            if pyxel.btnp(pyxel.KEY_R): self.start_new_maze()
-            if pyxel.btnp(pyxel.KEY_Q): pyxel.quit()
-            return
-
-        now=time.time(); dx=dy=0; moved=False
-        if pyxel.btnp(pyxel.KEY_UP): dy=-1
-        elif pyxel.btnp(pyxel.KEY_DOWN): dy=1
-        elif pyxel.btnp(pyxel.KEY_LEFT): dx=-1
-        elif pyxel.btnp(pyxel.KEY_RIGHT): dx=1
-
-        if dx!=0 or dy!=0:
-            nx,ny=self.px+dx,self.py+dy
-            if self.maze[ny][nx]==ROAD: self.px,self.py=nx,ny; moved=True
-
-        if not moved and now-self.last_move_time>=HOLD_MOVE_INTERVAL:
-            dx=dy=0
-            if pyxel.btn(pyxel.KEY_UP): dy=-1
-            elif pyxel.btn(pyxel.KEY_DOWN): dy=1
-            elif pyxel.btn(pyxel.KEY_LEFT): dx=-1
-            elif pyxel.btn(pyxel.KEY_RIGHT): dx=1
-            if dx!=0 or dy!=0:
-                nx,ny=self.px+dx,self.py+dy
-                if self.maze[ny][nx]==ROAD: self.px,self.py=nx,ny
-                self.last_move_time=now
-
-        if (self.px,self.py)==(self.gx,self.gy):
-            self.clear_time=time.time()-self.start_time
-            self.state='CLEAR'
-
-    def draw(self):
-        pyxel.cls(0)
-        if self.state=='COUNTDOWN':
-            remain=int(COUNTDOWN_TIME-(time.time()-self.countdown_start))+1
-            pyxel.text(110,120,f'START IN {remain}' if remain>0 else 'START!',10); return
-        if self.state=='CLEAR':
-            pyxel.text(70,80,'MAZE CLEAR',10)
-            pyxel.text(60,110,f'TIME {self.clear_time:.2f} SEC',7)
-            pyxel.text(50,150,'PRESS R NEXT',6)
-            pyxel.text(50,170,'PRESS Q QUIT',6)
-            return
-        for y in range(MAZE_H):
-            for x in range(MAZE_W):
-                draw_y=y*CELL_SIZE
-                if (x,y) in self.fake_walls:
-                    if self.is_revealed(x,y):
-                        pyxel.rect(x*CELL_SIZE,draw_y,8,8,5)
-                    else:
-                        pyxel.rect(x*CELL_SIZE,draw_y,8,8,8)
-                elif self.maze[y][x]==WALL: pyxel.rect(x*CELL_SIZE,draw_y,8,8,8)
-                else: pyxel.rect(x*CELL_SIZE,draw_y,8,8,0)
-        pyxel.rect(self.gx*CELL_SIZE,self.gy*CELL_SIZE,8,8,11)
-        pyxel.rect(self.px*CELL_SIZE,self.py*CELL_SIZE,8,8,8)
-        pyxel.rect(0,MAZE_H*CELL_SIZE,SCREEN_W,UI_H,1)
-        if self.start_time:
-            elapsed=time.time()-self.start_time
-            pyxel.text(5,MAZE_H*CELL_SIZE+4,f'TIME: {elapsed:.2f} sec',7)
-
-App()
-"></pyxel-run>
-
-<script>
-  // 自動フォーカス
-  window.addEventListener('load', () => {
-    const canvas = document.querySelector('canvas');
-    if(canvas) canvas.focus();
-  });
-</script>
-
-</body>
+<!DOCTYPE HTML> 
+<!--
+Aerial by HTML5 UP 
+html5up.net | @ajlkn 
+Free for personal and commercial use under the CCA 
+3.0 license (html5up.net/license) 
+-->
+<html>
+	<head>
+		<title>MAZE GAME</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="assets/css/noscript.css" />
+		</noscript>
+	</head>
+	<body class="is-preload">
+		<div id="wrapper">
+			<div id="bg"></div>
+			<div id="overlay"></div>
+			<div id="main">
+			
+				<!-- Header -->
+					<header id="header">
+						<h1>Fuga</h1>
+						<p>"嘘の壁がある"迷路だよ</p>
+						<nav>
+							<ul>
+								<li><a href='https://kitao.github.io/pyxel/wasm/launcher/?run=fugaoki-max.2025fit2.gametest'>GAME START!</a></li>
+							</ul>
+						</nav>
+					</header>
+				<!-- Footer -->
+					<footer id="footer">
+						<span class="copyright">&copy; Untitled. Design: <a href="http://html5up.net">HTML5 UP</a>.
+						</span>
+					</footer>
+			</div>
+		</div>
+		<script> window.onload = function() { document.body.classList.remove('is-preload'); } window.ontouchmove = function() { return false; } window.onorientationchange = function() { document.body.scrollTop = 0; }
+		</script>
+	</body>
 </html>
