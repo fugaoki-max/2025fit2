@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Maze Game</title>
+  <script src="https://cdn.jsdelivr.net/gh/kitao/pyxel/wasm/pyxel.js"></script>
+</head>
+
+<body>
+
+<pyxel-run script="
+import pyxel
+import random
+from collections import deque
+import time
+
+CELL_SIZE = 8
+MAZE_W = 32
+MAZE_H = 30
+UI_H = 16
+SCREEN_W = 256
+SCREEN_H = MAZE_H * CELL_SIZE + UI_H
+
+WALL = 1
+ROAD = 0
+
+COUNTDOWN_TIME = 3.0
+HOLD_MOVE_INTERVAL = 0.08
+
+class App:
+    def __init__(self):
+        pyxel.init(SCREEN_W, SCREEN_H, title='Maze Game')
+        self.start_new_maze()
+        pyxel.run(self.update, self.draw)
+
+    def start_new_maze(self):
+        self.generate_maze()
+        self.set_goal()
+        self.px, self.py = 1, 1
+        self.start_time = time.time()
+
+    def generate_maze(self):
+        self.maze = [[WALL for _ in range(MAZE_W)] for _ in range(MAZE_H)]
+
+        def dfs(x, y):
+            self.maze[y][x] = ROAD
+            dirs = [(2,0),(-2,0),(0,2),(0,-2)]
+            random.shuffle(dirs)
+            for dx, dy in dirs:
+                nx, ny = x+dx, y+dy
+                if 1 <= nx < MAZE_W-1 and 1 <= ny < MAZE_H-1:
+                    if self.maze[ny][nx] == WALL:
+                        self.maze[y+dy//2][x+dx//2] = ROAD
+                        dfs(nx, ny)
+        dfs(1,1)
+
+    def set_goal(self):
+        for y in range(MAZE_H-1,0,-1):
+            for x in range(MAZE_W-1,0,-1):
+                if self.maze[y][x] == ROAD:
+                    self.gx, self.gy = x, y
+                    return
+
+    def update(self):
+        dx = dy = 0
+        if pyxel.btnp(pyxel.KEY_UP): dy = -1
+        if pyxel.btnp(pyxel.KEY_DOWN): dy = 1
+        if pyxel.btnp(pyxel.KEY_LEFT): dx = -1
+        if pyxel.btnp(pyxel.KEY_RIGHT): dx = 1
+
+        nx, ny = self.px + dx, self.py + dy
+        if self.maze[ny][nx] == ROAD:
+            self.px, self.py = nx, ny
+
+    def draw(self):
+        pyxel.cls(0)
+        for y in range(MAZE_H):
+            for x in range(MAZE_W):
+                if self.maze[y][x] == WALL:
+                    pyxel.rect(x*CELL_SIZE, y*CELL_SIZE, 8, 8, 5)
+
+        pyxel.rect(self.gx*CELL_SIZE, self.gy*CELL_SIZE, 8, 8, 11)
+        pyxel.rect(self.px*CELL_SIZE, self.py*CELL_SIZE, 8, 8, 8)
+
+App()
+"></pyxel-run>
+
+</body>
+</html>
