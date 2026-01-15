@@ -2,70 +2,35 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>嘘の壁がある迷路ゲーム</title>
+  <title>嘘の壁がある迷路</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Pyxel WASM -->
-  <script src="https://cdn.jsdelivr.net/gh/kitao/pyxel/wasm/pyxel.js"></script>
-
   <style>
     body {
-      margin: 0;
-      background: #111;
-      color: white;
-      text-align: center;
-      font-family: sans-serif;
+      background:#111;
+      color:white;
+      text-align:center;
+      font-family:sans-serif;
     }
-
-    h1 {
-      margin-top: 40px;
-      font-size: 36px;
-    }
-
-    p {
-      font-size: 18px;
-      margin: 10px;
-    }
-
-    button {
-      font-size: 22px;
-      padding: 12px 40px;
-      margin-top: 30px;
-      cursor: pointer;
-      border-radius: 10px;
-      border: none;
-      background: #ff4fa3;
-      color: white;
-    }
-
-    button:hover {
-      background: #ff77bb;
-    }
-
-    #game {
-      margin-top: 20px;
+    h1 { margin-top:60px; font-size:36px; }
+    p { font-size:18px; }
+    a {
+      display:inline-block;
+      margin-top:40px;
+      padding:15px 40px;
+      font-size:22px;
+      background:#ff4fa3;
+      color:white;
+      text-decoration:none;
+      border-radius:10px;
     }
   </style>
 </head>
 
 <body>
-
   <h1>嘘の壁がある迷路</h1>
-  <p>十字キーでピンクのキューブを操作しよう</p>
+  <p>十字キーで操作してゴールを目指そう</p>
   <p>近づくと正体がわかる「嘘の壁」に注意！</p>
 
-  <button onclick="startGame()">ゲームスタート</button>
-
-  <div id="game"></div>
-
-  <script>
-    function startGame() {
-      const gameDiv = document.getElementById("game");
-      gameDiv.innerHTML = `
-        <pyxel-run script="gametest.py"></pyxel-run>
-      `;
-    }
-  </script>
-
+  <a href="game.html">ゲームスタート</a>
 </body>
 </html>
